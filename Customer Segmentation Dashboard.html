@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConnectPay - Customer Segmentation Dashboard</title>
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* --- Basic Setup & Typography --- */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        :root {
+            --bg-light-primary: #f9fafb;
+            --bg-light-secondary: #ffffff;
+            --border-color: #e5e7eb;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --accent-purple: #8b5cf6;
+            --accent-purple-light: #a78bfa;
+            --accent-purple-dark: #7c3aed;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light-primary);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 2rem;
+        }
+
+        /* --- Layout --- */
+        .dashboard-container {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        .dashboard-header {
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-header h1 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .dashboard-header p {
+            margin-top: 0.25rem;
+            color: var(--text-secondary);
+        }
+
+        .dashboard-main {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        /* Responsive layout for larger screens */
+        @media (min-width: 1024px) {
+            .dashboard-main {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .main-left {
+                grid-column: span 1 / span 1;
+            }
+            .main-right {
+                grid-column: span 2 / span 2;
+            }
+        }
+
+        .column-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* --- Card Component --- */
+        .card {
+            background-color: var(--bg-light-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        /* --- Specific Dashboard Sections --- */
+        
+        /* KPI Cards */
+        .kpi-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .kpi-item {
+            display: flex;
+            align-items: center;
+        }
+        .kpi-item__icon {
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            color: var(--accent-purple-dark);
+            background-color: rgba(139, 92, 246, 0.1);
+        }
+        
+        .kpi-item__text {
+            margin-left: 1rem;
+        }
+        .kpi-item__text p {
+            margin: 0;
+        }
+        .kpi-item__label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        .kpi-item__value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Segment Selector */
+        .segment-selector-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .segment-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            padding: 1rem; /* Overriding default card padding */
+            background-color: var(--bg-light-primary);
+        }
+        .segment-card.active {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
+            background-color: var(--bg-light-secondary);
+        }
+        .segment-card__name {
+            display: flex;
+            align-items: center;
+        }
+        .segment-card__color-dot {
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 9999px;
+            margin-right: 0.75rem;
+        }
+        .segment-card__label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .segment-card__count {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        /* Segment Profile */
+        .segment-profile__title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .segment-profile__description {
+            margin-top: 0.25rem;
+            color: var(--text-secondary);
+        }
+        .segment-profile__strategy {
+            margin-top: 0.75rem;
+            font-size: 0.875rem;
+            background-color: rgba(139, 92, 246, 0.1);
+            color: var(--accent-purple-dark);
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+        }
+        .segment-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+        @media (min-width: 640px) {
+            .segment-metrics {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        .metric-item__label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        .metric-item__value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Chart Card */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        @media (min-width: 768px) {
+            .charts-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        .chart-card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px; /* Give canvas a height */
+        }
+
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <h1>Customer Segmentation Dashboard</h1>
+            <p>An analysis of ConnectPay's remittance customer behavior.</p>
+        </header>
+
+        <!-- Main Content Grid -->
+        <main class="dashboard-main">
+            <!-- Left Column: KPIs and Segment Selection -->
+            <div class="main-left column-layout">
+                <!-- KPIs Section -->
+                <div class="card">
+                    <h2 class="card-title">Overall Performance</h2>
+                    <div class="kpi-list">
+                        <!-- Total Customers KPI -->
+                        <div class="kpi-item">
+                            <div class="kpi-item__icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            </div>
+                            <div class="kpi-item__text">
+                                <p class="kpi-item__label">Total Customers</p>
+                                <p id="total-customers" class="kpi-item__value">0</p>
+                            </div>
+                        </div>
+                        <!-- Total Value Remitted KPI -->
+                        <div class="kpi-item">
+                            <div class="kpi-item__icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                            </div>
+                            <div class="kpi-item__text">
+                                <p class="kpi-item__label">Total Value Remitted</p>
+                                <p id="total-value" class="kpi-item__value">$0</p>
+                            </div>
+                        </div>
+                        <!-- Total Transactions KPI -->
+                        <div class="kpi-item">
+                            <div class="kpi-item__icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
+                            </div>
+                            <div class="kpi-item__text">
+                                <p class="kpi-item__label">Total Transactions</p>
+                                <p id="total-transactions" class="kpi-item__value">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Segments Overview -->
+                <div class="card">
+                    <h2 class="card-title">Customer Segments</h2>
+                    <div class="segment-selector-list" id="segment-selector">
+                        <!-- Segment cards will be dynamically inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Charts and Details -->
+            <div class="main-right column-layout">
+                <!-- Segment Profile Card -->
+                <div class="card">
+                    <h2 id="segment-title" class="segment-profile__title">All Customers</h2>
+                    <p id="segment-description" class="segment-profile__description">Overview of the entire customer base.</p>
+                    <div id="segment-metrics" class="segment-metrics">
+                        <!-- Metrics will be dynamically inserted here -->
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="charts-grid">
+                    <div class="card">
+                        <h3 class="chart-card-title">Remittance Corridors</h3>
+                        <div class="chart-container">
+                            <canvas id="corridorChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="chart-card-title">Primary Device Usage</h3>
+                        <div class="chart-container">
+                            <canvas id="deviceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- DATA SOURCE ---
+        const customerData = [
+            {"CustomerID":1001,"Age":26,"Customer_Tenure_Months":4,"Remittance_Corridor":"IND-USA","Total_Transactions_Last_12M":2,"Avg_Transaction_Value_USD":165,"Primary_Device":"Mobile App","Used_Promo_Code":1},
+            {"CustomerID":1002,"Age":41,"Customer_Tenure_Months":22,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":12,"Avg_Transaction_Value_USD":410,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1003,"Age":38,"Customer_Tenure_Months":19,"Remittance_Corridor":"IND-USA","Total_Transactions_Last_12M":3,"Avg_Transaction_Value_USD":2850,"Primary_Device":"Web Browser","Used_Promo_Code":0},
+            {"CustomerID":1004,"Age":24,"Customer_Tenure_Months":2,"Remittance_Corridor":"IND-UK","Total_Transactions_Last_12M":1,"Avg_Transaction_Value_USD":115,"Primary_Device":"Mobile App","Used_Promo_Code":1},
+            {"CustomerID":1005,"Age":35,"Customer_Tenure_Months":26,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":22,"Avg_Transaction_Value_USD":355,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1006,"Age":51,"Customer_Tenure_Months":20,"Remittance_Corridor":"IND-CAN","Total_Transactions_Last_12M":2,"Avg_Transaction_Value_USD":3100,"Primary_Device":"Web Browser","Used_Promo_Code":0},
+            {"CustomerID":1007,"Age":29,"Customer_Tenure_Months":15,"Remittance_Corridor":"IND-KSA","Total_Transactions_Last_12M":11,"Avg_Transaction_Value_USD":550,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1008,"Age":23,"Customer_Tenure_Months":5,"Remittance_Corridor":"IND-AUS","Total_Transactions_Last_12M":3,"Avg_Transaction_Value_USD":210,"Primary_Device":"Mobile App","Used_Promo_Code":1},
+            {"CustomerID":1009,"Age":33,"Customer_Tenure_Months":31,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":15,"Avg_Transaction_Value_USD":480,"Primary_Device":"Mobile App","Used_Promo_Code":1},
+            {"CustomerID":1010,"Age":48,"Customer_Tenure_Months":16,"Remittance_Corridor":"IND-USA","Total_Transactions_Last_12M":4,"Avg_Transaction_Value_USD":1980,"Primary_Device":"Web Browser","Used_Promo_Code":0},
+            {"CustomerID":1011,"Age":22,"Customer_Tenure_Months":3,"Remittance_Corridor":"IND-USA","Total_Transactions_Last_12M":2,"Avg_Transaction_Value_USD":140,"Primary_Device":"Web Browser","Used_Promo_Code":1},
+            {"CustomerID":1012,"Age":39,"Customer_Tenure_Months":28,"Remittance_Corridor":"IND-KSA","Total_Transactions_Last_12M":18,"Avg_Transaction_Value_USD":610,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1013,"Age":27,"Customer_Tenure_Months":6,"Remittance_Corridor":"IND-UK","Total_Transactions_Last_12M":4,"Avg_Transaction_Value_USD":240,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1014,"Age":31,"Customer_Tenure_Months":23,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":13,"Avg_Transaction_Value_USD":390,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1015,"Age":44,"Customer_Tenure_Months":14,"Remittance_Corridor":"IND-UK","Total_Transactions_Last_12M":1,"Avg_Transaction_Value_USD":3450,"Primary_Device":"Web Browser","Used_Promo_Code":0},
+            {"CustomerID":1016,"Age":36,"Customer_Tenure_Months":25,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":16,"Avg_Transaction_Value_USD":425,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1017,"Age":25,"Customer_Tenure_Months":1,"Remittance_Corridor":"IND-USA","Total_Transactions_Last_12M":1,"Avg_Transaction_Value_USD":95,"Primary_Device":"Mobile App","Used_Promo_Code":1},
+            {"CustomerID":1018,"Age":42,"Customer_Tenure_Months":21,"Remittance_Corridor":"IND-USA","Total_Transactions_Last_12M":3,"Avg_Transaction_Value_USD":2500,"Primary_Device":"Web Browser","Used_Promo_Code":0},
+            {"CustomerID":1019,"Age":28,"Customer_Tenure_Months":4,"Remittance_Corridor":"IND-CAN","Total_Transactions_Last_12M":2,"Avg_Transaction_Value_USD":180,"Primary_Device":"Web Browser","Used_Promo_Code":1},
+            {"CustomerID":1020,"Age":34,"Customer_Tenure_Months":33,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":24,"Avg_Transaction_Value_USD":370,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1021,"Age":46,"Customer_Tenure_Months":18,"Remittance_Corridor":"IND-UK","Total_Transactions_Last_12M":2,"Avg_Transaction_Value_USD":2200,"Primary_Device":"Web Browser","Used_Promo_Code":1},
+            {"CustomerID":1022,"Age":32,"Customer_Tenure_Months":19,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":10,"Avg_Transaction_Value_USD":510,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1023,"Age":26,"Customer_Tenure_Months":2,"Remittance_Corridor":"IND-KSA","Total_Transactions_Last_12M":1,"Avg_Transaction_Value_USD":150,"Primary_Device":"Mobile App","Used_Promo_Code":1},
+            {"CustomerID":1024,"Age":37,"Customer_Tenure_Months":29,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":14,"Avg_Transaction_Value_USD":450,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1025,"Age":49,"Customer_Tenure_Months":12,"Remittance_Corridor":"IND-USA","Total_Transactions_Last_12M":4,"Avg_Transaction_Value_USD":1800,"Primary_Device":"Web Browser","Used_Promo_Code":0},
+            {"CustomerID":1026,"Age":24,"Customer_Tenure_Months":5,"Remittance_Corridor":"IND-USA","Total_Transactions_Last_12M":3,"Avg_Transaction_Value_USD":195,"Primary_Device":"Mobile App","Used_Promo_Code":1},
+            {"CustomerID":1027,"Age":30,"Customer_Tenure_Months":27,"Remittance_Corridor":"IND-KSA","Total_Transactions_Last_12M":12,"Avg_Transaction_Value_USD":650,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1028,"Age":53,"Customer_Tenure_Months":24,"Remittance_Corridor":"IND-CAN","Total_Transactions_Last_12M":2,"Avg_Transaction_Value_USD":3300,"Primary_Device":"Web Browser","Used_Promo_Code":0},
+            {"CustomerID":1029,"Age":23,"Customer_Tenure_Months":3,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":2,"Avg_Transaction_Value_USD":130,"Primary_Device":"Mobile App","Used_Promo_Code":1},
+            {"CustomerID":1030,"Age":35,"Customer_Tenure_Months":30,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":20,"Avg_Transaction_Value_USD":380,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1031,"Age":41,"Customer_Tenure_Months":17,"Remittance_Corridor":"IND-USA","Total_Transactions_Last_12M":3,"Avg_Transaction_Value_USD":2650,"Primary_Device":"Web Browser","Used_Promo_Code":0},
+            {"CustomerID":1032,"Age":28,"Customer_Tenure_Months":14,"Remittance_Corridor":"IND-UK","Total_Transactions_Last_12M":11,"Avg_Transaction_Value_USD":490,"Primary_Device":"Mobile App","Used_Promo_Code":1},
+            {"CustomerID":1033,"Age":25,"Customer_Tenure_Months":4,"Remittance_Corridor":"IND-AUS","Total_Transactions_Last_12M":2,"Avg_Transaction_Value_USD":175,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1034,"Age":39,"Customer_Tenure_Months":26,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":17,"Avg_Transaction_Value_USD":415,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1035,"Age":47,"Customer_Tenure_Months":15,"Remittance_Corridor":"IND-UK","Total_Transactions_Last_12M":1,"Avg_Transaction_Value_USD":4100,"Primary_Device":"Web Browser","Used_Promo_Code":0},
+            {"CustomerID":1036,"Age":22,"Customer_Tenure_Months":1,"Remittance_Corridor":"IND-USA","Total_Transactions_Last_12M":1,"Avg_Transaction_Value_USD":85,"Primary_Device":"Web Browser","Used_Promo_Code":1},
+            {"CustomerID":1037,"Age":33,"Customer_Tenure_Months":32,"Remittance_Corridor":"IND-KSA","Total_Transactions_Last_12M":19,"Avg_Transaction_Value_USD":580,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1038,"Age":27,"Customer_Tenure_Months":6,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":3,"Avg_Transaction_Value_USD":220,"Primary_Device":"Mobile App","Used_Promo_Code":1},
+            {"CustomerID":1039,"Age":36,"Customer_Tenure_Months":24,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":14,"Avg_Transaction_Value_USD":400,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1040,"Age":50,"Customer_Tenure_Months":23,"Remittance_Corridor":"IND-USA","Total_Transactions_Last_12M":4,"Avg_Transaction_Value_USD":2950,"Primary_Device":"Web Browser","Used_Promo_Code":0},
+            {"CustomerID":1041,"Age":29,"Customer_Tenure_Months":21,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":12,"Avg_Transaction_Value_USD":470,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1042,"Age":26,"Customer_Tenure_Months":2,"Remittance_Corridor":"IND-UK","Total_Transactions_Last_12M":1,"Avg_Transaction_Value_USD":125,"Primary_Device":"Mobile App","Used_Promo_Code":1},
+            {"CustomerID":1043,"Age":43,"Customer_Tenure_Months":20,"Remittance_Corridor":"IND-CAN","Total_Transactions_Last_12M":2,"Avg_Transaction_Value_USD":2750,"Primary_Device":"Web Browser","Used_Promo_Code":0},
+            {"CustomerID":1044,"Age":31,"Customer_Tenure_Months":28,"Remittance_Corridor":"IND-KSA","Total_Transactions_Last_12M":15,"Avg_Transaction_Value_USD":620,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1045,"Age":24,"Customer_Tenure_Months":5,"Remittance_Corridor":"IND-USA","Total_Transactions_Last_12M":3,"Avg_Transaction_Value_USD":190,"Primary_Device":"Web Browser","Used_Promo_Code":1},
+            {"CustomerID":1046,"Age":38,"Customer_Tenure_Months":34,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":23,"Avg_Transaction_Value_USD":430,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1047,"Age":45,"Customer_Tenure_Months":19,"Remittance_Corridor":"IND-USA","Total_Transactions_Last_12M":3,"Avg_Transaction_Value_USD":3200,"Primary_Device":"Web Browser","Used_Promo_Code":0},
+            {"CustomerID":1048,"Age":30,"Customer_Tenure_Months":17,"Remittance_Corridor":"IND-UK","Total_Transactions_Last_12M":10,"Avg_Transaction_Value_USD":530,"Primary_Device":"Mobile App","Used_Promo_Code":0},
+            {"CustomerID":1049,"Age":23,"Customer_Tenure_Months":3,"Remittance_Corridor":"IND-AUS","Total_Transactions_Last_12M":2,"Avg_Transaction_Value_USD":160,"Primary_Device":"Mobile App","Used_Promo_Code":1},
+            {"CustomerID":1050,"Age":34,"Customer_Tenure_Months":30,"Remittance_Corridor":"IND-UAE","Total_Transactions_Last_12M":18,"Avg_Transaction_Value_USD":460,"Primary_Device":"Mobile App","Used_Promo_Code":0}
+        ];
+
+        // --- SEGMENTATION LOGIC ---
+        function assignSegment(customer) {
+            const tenure = customer.Customer_Tenure_Months;
+            const transactions = customer.Total_Transactions_Last_12M;
+            const avgValue = customer.Avg_Transaction_Value_USD;
+
+            if (avgValue > 1500) {
+                return 'High-Value Occasionals';
+            } else if (transactions > 9 && tenure > 10) {
+                return 'Loyal Regulars';
+            } else {
+                return 'New & Cautious Explorers';
+            }
+        }
+
+        const segmentedData = customerData.map(c => ({...c, segment: assignSegment(c)}));
+
+        // --- CHART & DASHBOARD LOGIC ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const segments = {
+                'Loyal Regulars': {
+                    data: segmentedData.filter(c => c.segment === 'Loyal Regulars'),
+                    color: '#a78bfa', // purple 400
+                    description: 'Frequent users with high tenure, sending moderate amounts regularly.',
+                    strategy: 'Nurture with loyalty programs, referral bonuses, and enhance mobile app features for speed and convenience.'
+                },
+                'High-Value Occasionals': {
+                    data: segmentedData.filter(c => c.segment === 'High-Value Occasionals'),
+                    color: '#7c3aed', // purple 600
+                    description: 'Infrequent users who send large amounts per transaction.',
+                    strategy: 'Target with content on security, compliance, and preferential exchange rates for large sums. Offer dedicated support.'
+                },
+                'New & Cautious Explorers': {
+                    data: segmentedData.filter(c => c.segment === 'New & Cautious Explorers'),
+                    color: '#c4b5fd', // purple 300
+                    description: 'New customers testing the service with small, infrequent transfers.',
+                    strategy: 'Engage with onboarding campaigns, offer promotions on second/third transfers, and simplify the UI to build trust.'
+                }
+            };
+
+            let corridorChart, deviceChart;
+            
+            function init() {
+                updateGlobalKPIs();
+                populateSegmentSelector();
+                updateDashboard('All Customers', segmentedData);
+                document.querySelector('.segment-card').classList.add('active');
+            }
+
+            function updateGlobalKPIs() {
+                document.getElementById('total-customers').textContent = segmentedData.length;
+                const totalValue = segmentedData.reduce((sum, c) => sum + (c.Total_Transactions_Last_12M * c.Avg_Transaction_Value_USD), 0);
+                document.getElementById('total-value').textContent = `$${totalValue.toLocaleString()}`;
+                const totalTransactions = segmentedData.reduce((sum, c) => sum + c.Total_Transactions_Last_12M, 0);
+                document.getElementById('total-transactions').textContent = totalTransactions.toLocaleString();
+            }
+
+            function populateSegmentSelector() {
+                const selector = document.getElementById('segment-selector');
+                selector.innerHTML = '';
+                const allCustomersCard = createSegmentCard('All Customers', segmentedData.length, 'var(--accent-purple)');
+                selector.appendChild(allCustomersCard);
+                Object.keys(segments).forEach(name => {
+                    const segment = segments[name];
+                    const card = createSegmentCard(name, segment.data.length, segment.color);
+                    selector.appendChild(card);
+                });
+            }
+
+            function createSegmentCard(name, count, color) {
+                const card = document.createElement('div');
+                card.className = 'segment-card';
+                card.dataset.segment = name;
+                card.innerHTML = `
+                    <div class="segment-card__name">
+                        <div class="segment-card__color-dot" style="background-color: ${color};"></div>
+                        <span class="segment-card__label">${name}</span>
+                    </div>
+                    <span class="segment-card__count">${count}</span>
+                `;
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.segment-card').forEach(c => c.classList.remove('active'));
+                    card.classList.add('active');
+                    const data = name === 'All Customers' ? segmentedData : segments[name].data;
+                    updateDashboard(name, data);
+                });
+                return card;
+            }
+
+            function updateDashboard(segmentName, data) {
+                updateSegmentProfile(segmentName, data);
+                updateCharts(data);
+            }
+
+            function updateSegmentProfile(segmentName, data) {
+                const titleEl = document.getElementById('segment-title');
+                const descEl = document.getElementById('segment-description');
+                const metricsEl = document.getElementById('segment-metrics');
+                titleEl.textContent = segmentName;
+                if (segmentName === 'All Customers') {
+                    descEl.innerHTML = 'Overview of the entire customer base.';
+                } else {
+                    descEl.innerHTML = `
+                        ${segments[segmentName].description}
+                        <p class="segment-profile__strategy"><strong>Strategy:</strong> ${segments[segmentName].strategy}</p>
+                    `;
+                }
+                const totalCustomers = data.length;
+                const avgTenure = data.reduce((sum, c) => sum + c.Customer_Tenure_Months, 0) / totalCustomers || 0;
+                const avgTransactions = data.reduce((sum, c) => sum + c.Total_Transactions_Last_12M, 0) / totalCustomers || 0;
+                const avgValue = data.reduce((sum, c) => sum + c.Avg_Transaction_Value_USD, 0) / totalCustomers || 0;
+                metricsEl.innerHTML = `
+                    <div><p class="metric-item__label">Customers</p><p class="metric-item__value">${totalCustomers}</p></div>
+                    <div><p class="metric-item__label">Avg. Tenure</p><p class="metric-item__value">${avgTenure.toFixed(1)}m</p></div>
+                    <div><p class="metric-item__label">Avg. Transactions</p><p class="metric-item__value">${avgTransactions.toFixed(1)}</p></div>
+                    <div><p class="metric-item__label">Avg. Txn Value</p><p class="metric-item__value">$${avgValue.toFixed(0)}</p></div>
+                `;
+            }
+
+            function updateCharts(data) {
+                updateCorridorChart(data);
+                updateDeviceChart(data);
+            }
+
+            function getChartData(data, key) {
+                const counts = data.reduce((acc, item) => {
+                    const value = item[key] || 'Unknown';
+                    acc[value] = (acc[value] || 0) + 1;
+                    return acc;
+                }, {});
+                const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+                return {
+                    labels: sorted.map(item => item[0]),
+                    values: sorted.map(item => item[1])
+                };
+            }
+
+            const baseChartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: 'var(--text-primary)', boxWidth: 12, padding: 20 }
+                    }
+                }
+            };
+
+            function updateCorridorChart(data) {
+                const chartData = getChartData(data, 'Remittance_Corridor');
+                if (corridorChart) corridorChart.destroy();
+                corridorChart = new Chart(document.getElementById('corridorChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: chartData.labels,
+                        datasets: [{
+                            label: 'Number of Customers',
+                            data: chartData.values,
+                            backgroundColor: 'rgba(139, 92, 246, 0.5)',
+                            borderColor: 'rgba(139, 92, 246, 1)',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                        }]
+                    },
+                    options: {
+                        ...baseChartOptions,
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: 'var(--border-color)' }, ticks: { color: 'var(--text-secondary)' } },
+                            x: { grid: { display: false }, ticks: { color: 'var(--text-secondary)' } }
+                        }
+                    }
+                });
+            }
+
+            function updateDeviceChart(data) {
+                const chartData = getChartData(data, 'Primary_Device');
+                if (deviceChart) deviceChart.destroy();
+                deviceChart = new Chart(document.getElementById('deviceChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: chartData.labels,
+                        datasets: [{
+                            data: chartData.values,
+                            backgroundColor: ['rgba(124, 58, 237, 0.7)', 'rgba(167, 139, 250, 0.7)', 'rgba(196, 181, 253, 0.7)'],
+                            borderColor: 'var(--bg-light-secondary)',
+                            borderWidth: 4,
+                        }]
+                    },
+                    options: baseChartOptions
+                });
+            }
+
+            init();
+        });
+    </script>
+</body>
+</html>
